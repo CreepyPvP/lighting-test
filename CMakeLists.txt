@@ -1,14 +1,15 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(
-	sprite-generator
+	lighting-test
 )
 
 set(ROOT_DIR ${PROJECT_SOURCE_DIR})
 
+add_definitions( -DSUPPORT_FILEFORMAT_JPG )
+
 set(RAYLIB_DIR raylib)
 add_subdirectory(${RAYLIB_DIR})
-
 
 file(GLOB_RECURSE SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/code/*.cpp

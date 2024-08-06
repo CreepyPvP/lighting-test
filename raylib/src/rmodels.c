@@ -3578,11 +3578,20 @@ void DrawModel(Model model, Vector3 position, float scale, Color tint)
     Vector3 vScale = { scale, scale, scale };
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
 
-    DrawModelEx(model, position, rotationAxis, 0.0f, vScale, tint);
+    DrawModelEx(model, position, rotationAxis, 0.0f, vScale, tint, NULL);
+}
+
+// Draw a model with a specific material (with texture if set)
+void DrawModelMaterial(Model model, Vector3 position, float scale, Material material, Color tint)
+{
+    Vector3 vScale = { scale, scale, scale };
+    Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
+
+    DrawModelEx(model, position, rotationAxis, 0.0f, vScale, tint, &material);
 }
 
 // Draw a model with extended parameters
-void DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale, Color tint)
+void DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale, Color tint, Material *material)
 {
     // Calculate transformation matrix from function parameters
     // Get transform matrix (rotation -> scale -> translation)
@@ -3597,7 +3606,9 @@ void DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rota
 
     for (int i = 0; i < model.meshCount; i++)
     {
-        Color color = model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color;
+        Material mat = material ? *material : model.materials[model.meshMaterial[i]];
+
+        Color color = mat.maps[MATERIAL_MAP_DIFFUSE].color;
 
         Color colorTint = WHITE;
         colorTint.r = (unsigned char)(((int)color.r*(int)tint.r)/255);
@@ -3605,9 +3616,9 @@ void DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rota
         colorTint.b = (unsigned char)(((int)color.b*(int)tint.b)/255);
         colorTint.a = (unsigned char)(((int)color.a*(int)tint.a)/255);
 
-        model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = colorTint;
-        DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], model.transform);
-        model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = color;
+        mat.maps[MATERIAL_MAP_DIFFUSE].color = colorTint;
+
+        DrawMesh(model.meshes[i], mat, model.transform);
     }
 }
 
@@ -3626,7 +3637,7 @@ void DrawModelWiresEx(Model model, Vector3 position, Vector3 rotationAxis, float
 {
     rlEnableWireMode();
 
-    DrawModelEx(model, position, rotationAxis, rotationAngle, scale, tint);
+    DrawModelEx(model, position, rotationAxis, rotationAngle, scale, tint, NULL);
 
     rlDisableWireMode();
 }

@@ -4,18 +4,6 @@
 #include "rlgl.h"
 #include "raymath.h"
 
-static void SetupShadowmap(int size)
-{
-    unsigned int depth = rlLoadTextureDepth(size, size, true);
-    unsigned int rbo = rlLoadFramebuffer();
-    rlFramebufferAttach(fbo, rbo, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
-
-    if (rlFramebufferComplete(fbo)) 
-    {
-        TraceLog(LOG_INFO, "FBO: [ID %i] Framebuffer object created successfully", fbo);
-    }
-}
-
 static TextureCubemap TextureToCubemap(Shader shader, Texture2D panorama, int size, int format)
 {
     TextureCubemap cubemap = { 0 };
@@ -87,8 +75,8 @@ int main()
 
     SetTraceLogLevel(LOG_DEBUG);
     // TODO: MSAA Fallback in rcore_desktop_glfw.c:1331
-    // SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
+    //SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
     InitWindow(screenWidth, screenHeight, "raylib [models] example - models loading");
     DisableCursor();
@@ -123,12 +111,49 @@ int main()
     skybox.materials[0].maps[MATERIAL_MAP_CUBEMAP].texture = TextureToCubemap(cubemapShader, skyboxTexture, 1024, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
     UnloadTexture(skyboxTexture);
 
+    // Shadow setup
     Material shadowMaterial = LoadMaterialDefault();
     shadowMaterial.shader = LoadShader("../shader/shadow_vert.glsl", "../shader/shadow_frag.glsl");
+
+    int shadowMapSize = 1024;
+    Texture shadowMap = {};
+    shadowMap.id = rlLoadTextureDepth(shadowMapSize, shadowMapSize, false);
+    shadowMap.width = shadowMapSize;
+    shadowMap.height = shadowMapSize;
+    unsigned int shadowMapFramebuffer = rlLoadFramebuffer();
+    rlFramebufferAttach(shadowMapFramebuffer, shadowMap.id, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
+
+    if (rlFramebufferComplete(shadowMapFramebuffer)) 
+    {
+        TraceLog(LOG_INFO, "FBO: [ID %i] Framebuffer object created successfully", shadowMapFramebuffer);
+    }
+
+    // Matrix projection = MatrixOrtho(-shadowMapSize / 2, shadowMapSize / 2, -shadowMapSize / 2, shadowMapSize / 2, 1, 100);
+
 
     while (!WindowShouldClose())
     {
         UpdateCamera(&camera, CAMERA_FREE);   
+
+        // Start shadow map
+        rlViewport(0, 0, shadowMapSize, shadowMapSize);
+        rlEnableFramebuffer(shadowMapFramebuffer);
+        rlClearScreenBuffers();
+
+        // rlSetUniformMatrix(shadowMaterial.shader.locs[SHADER_LOC_MATRIX_PROJECTION], projection);
+        rlMatrixMode(RL_PROJECTION);
+        rlPushMatrix();
+        rlLoadIdentity();
+        rlOrtho(-shadowMapSize / 2, shadowMapSize / 2, -shadowMapSize / 2, shadowMapSize / 2, 1, 100);
+        rlMatrixMode(RL_MODELVIEW);
+        rlLoadIdentity();
+
+        DrawModelMaterial(model, position, 1.0f, shadowMaterial, WHITE);
+
+        rlViewport(0, 0, rlGetFramebufferWidth(), rlGetFramebufferHeight());
+        rlUnloadFramebuffer(shadowMapFramebuffer);
+
+        // End shadowmap
 
         ClearBackground(RAYWHITE);
 
@@ -141,12 +166,14 @@ int main()
         rlEnableBackfaceCulling();
         rlEnableDepthMask();
 
-        DrawModelMaterial(model, position, 1.0f, shadowMaterial, WHITE);
+        DrawModel(model, position, 1.0f, WHITE);
 
         DrawModel(model, position, 1.0f, WHITE);
         DrawGrid(20, 10.0f);
 
         EndMode3D();
+
+        DrawTexture(shadowMap, 0, 0, WHITE);
 
         DrawFPS(10, 10);
 

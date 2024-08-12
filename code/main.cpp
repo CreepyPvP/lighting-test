@@ -161,6 +161,8 @@ int main()
         DrawModelMaterial(model, position, 1.0f, shadowMaterial, WHITE);
         // DrawModel(model, position, 1.0f, WHITE);
 
+        Matrix light_space = RLGL.State.transform;
+
         EndMode3D();
         EndShadowMode();
 

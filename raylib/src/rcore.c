@@ -1067,6 +1067,42 @@ void BeginTextureMode(RenderTexture2D target)
     CORE.Window.usingFbo = true;
 }
 
+// Initializes render texture for drawing
+void BeginShadowMode(ShadowMap target)
+{
+    rlDrawRenderBatchActive();      // Update and draw internal render batch
+
+    rlEnableFramebuffer(target.id); // Enable render target
+
+    // Set viewport and RLGL internal framebuffer size
+    rlViewport(0, 0, target.depth.width, target.depth.height);
+    rlSetFramebufferWidth(target.depth.width);
+    rlSetFramebufferHeight(target.depth.height);
+
+    rlMatrixMode(RL_PROJECTION);    // Switch to projection matrix
+    rlLoadIdentity();               // Reset current matrix (projection)
+
+    // Set orthographic projection to current framebuffer size
+    // NOTE: Configured top-left corner as (0, 0)
+    rlOrtho(0, target.depth.width, target.depth.height, 0, 0.0f, 1.0f);
+
+    rlMatrixMode(RL_MODELVIEW);     // Switch back to modelview matrix
+    rlLoadIdentity();               // Reset current matrix (modelview)
+
+    //rlScalef(0.0f, -1.0f, 0.0f);  // Flip Y-drawing (?)
+
+    // Setup current width/height for proper aspect ratio
+    // calculation when using BeginMode3D()
+    CORE.Window.currentFbo.width = target.depth.width;
+    CORE.Window.currentFbo.height = target.depth.height;
+    CORE.Window.usingFbo = true;
+}
+
+void EndShadowMode()
+{
+    EndTextureMode();
+}
+
 // Ends drawing to render texture
 void EndTextureMode(void)
 {

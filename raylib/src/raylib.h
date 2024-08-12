@@ -287,6 +287,13 @@ typedef struct RenderTexture {
 // RenderTexture2D, same as RenderTexture
 typedef RenderTexture RenderTexture2D;
 
+
+typedef struct ShadowMap
+{
+    unsigned int id;
+    Texture depth;
+} ShadowMap;
+
 // NPatchInfo, n-patch layout info
 typedef struct NPatchInfo {
     Rectangle source;       // Texture source rectangle
@@ -1022,6 +1029,8 @@ RLAPI void BeginMode3D(Camera3D camera);                          // Begin 3D mo
 RLAPI void EndMode3D(void);                                       // Ends 3D mode and returns to default 2D orthographic mode
 RLAPI void BeginTextureMode(RenderTexture2D target);              // Begin drawing to render texture
 RLAPI void EndTextureMode(void);                                  // Ends drawing to render texture
+RLAPI void BeginShadowMode(ShadowMap target);
+RLAPI void EndShadowMode(void);
 RLAPI void BeginShaderMode(Shader shader);                        // Begin custom shader drawing
 RLAPI void EndShaderMode(void);                                   // End custom shader drawing (use default shader)
 RLAPI void BeginBlendMode(int mode);                              // Begin blending mode (alpha, additive, multiplied, subtract, custom)

@@ -1,8 +1,12 @@
 #include <stdio.h>
+#include <stdint.h>
+#include <assert.h>
 
 #include "raylib.h"
 #include "rlgl.h"
 #include "raymath.h"
+
+typedef uint32_t u32;
 
 static TextureCubemap TextureToCubemap(Shader shader, Texture2D panorama, int size, int format)
 {
@@ -68,6 +72,31 @@ static TextureCubemap TextureToCubemap(Shader shader, Texture2D panorama, int si
     return cubemap;
 }
 
+ShadowMap LoadShadowMap(u32 width, u32 height)
+{
+    ShadowMap map = {};
+    map.id = rlLoadFramebuffer();
+
+    assert(map.id);
+
+    rlEnableFramebuffer(map.id);
+    map.depth.id = rlLoadTextureDepth(width, height, false);
+    map.depth.width = width;
+    map.depth.height = height;
+    map.depth.format = 19;
+    map.depth.mipmaps = 1;
+
+    rlFramebufferAttach(map.id, map.depth.id, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
+
+    if (rlFramebufferComplete(map.id)) 
+    {
+        TraceLog(LOG_INFO, "Shadowmap created successfully");
+    }
+    rlDisableFramebuffer();
+
+    return map;
+}
+
 int main()
 {
     const int screenWidth = 800;
@@ -115,47 +144,28 @@ int main()
     Material shadowMaterial = LoadMaterialDefault();
     shadowMaterial.shader = LoadShader("../shader/shadow_vert.glsl", "../shader/shadow_frag.glsl");
 
-    int shadowMapSize = 1024;
-    Texture shadowMap = {};
-    shadowMap.id = rlLoadTextureDepth(shadowMapSize, shadowMapSize, false);
-    shadowMap.width = shadowMapSize;
-    shadowMap.height = shadowMapSize;
-    unsigned int shadowMapFramebuffer = rlLoadFramebuffer();
-    rlFramebufferAttach(shadowMapFramebuffer, shadowMap.id, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
-
-    if (rlFramebufferComplete(shadowMapFramebuffer)) 
-    {
-        TraceLog(LOG_INFO, "FBO: [ID %i] Framebuffer object created successfully", shadowMapFramebuffer);
-    }
+    ShadowMap shadow_map = LoadShadowMap(1024, 1024);
 
     // Matrix projection = MatrixOrtho(-shadowMapSize / 2, shadowMapSize / 2, -shadowMapSize / 2, shadowMapSize / 2, 1, 100);
 
+    // RenderTexture render_texture = LoadRenderTexture(1024, 1024);
 
     while (!WindowShouldClose())
     {
         UpdateCamera(&camera, CAMERA_FREE);   
 
-        // Start shadow map
-        rlViewport(0, 0, shadowMapSize, shadowMapSize);
-        rlEnableFramebuffer(shadowMapFramebuffer);
-        rlClearScreenBuffers();
-
-        // rlSetUniformMatrix(shadowMaterial.shader.locs[SHADER_LOC_MATRIX_PROJECTION], projection);
-        rlMatrixMode(RL_PROJECTION);
-        rlPushMatrix();
-        rlLoadIdentity();
-        rlOrtho(-shadowMapSize / 2, shadowMapSize / 2, -shadowMapSize / 2, shadowMapSize / 2, 1, 100);
-        rlMatrixMode(RL_MODELVIEW);
-        rlLoadIdentity();
+        BeginShadowMode(shadow_map);
+        ClearBackground(WHITE);
+        BeginMode3D(camera);
 
         DrawModelMaterial(model, position, 1.0f, shadowMaterial, WHITE);
+        // DrawModel(model, position, 1.0f, WHITE);
 
-        rlViewport(0, 0, rlGetFramebufferWidth(), rlGetFramebufferHeight());
-        rlUnloadFramebuffer(shadowMapFramebuffer);
+        EndMode3D();
+        EndShadowMode();
 
-        // End shadowmap
-
-        ClearBackground(RAYWHITE);
+        // rlViewport(0, 0, CORE.Window.currentFbo.width, CORE.Window.currentFbo.height);
+        ClearBackground(BLACK);
 
         BeginDrawing();
         BeginMode3D(camera);
@@ -167,13 +177,11 @@ int main()
         rlEnableDepthMask();
 
         DrawModel(model, position, 1.0f, WHITE);
-
-        DrawModel(model, position, 1.0f, WHITE);
         DrawGrid(20, 10.0f);
 
         EndMode3D();
 
-        DrawTexture(shadowMap, 0, 0, WHITE);
+        DrawTexture(shadow_map.depth, 0, 0, WHITE);
 
         DrawFPS(10, 10);
 
